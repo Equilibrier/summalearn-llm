@@ -1,6 +1,6 @@
 
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 
 from bs4 import BeautifulSoup
@@ -9,7 +9,7 @@ from docx import Document
 import re
 
 def split_in_paragraphs(text):
-
+    
     def lookup_biblice():
         vechiul_testament = ["geneza", "facere", "exodul", "iesirea", "levitic", "numerii", "deuteronomul", "iosua", "judecatori", "rut", "regi1", "1regi", "regi2", "2regi", "regi3", "3regi", "regi4", "4regi", "cronici1", "paralelipomena1", "1paralelipomena", "cronici2", "paralelipomena2", "2paralelipomena", "ezdra", "neemia", "estera", "iov", "psalmi", "proverbe", "ecclesiastul", "cantarea cantarilor", "isaia", "ieremia", "plangerile ieremia", "iezechiel", "daniel", "osea", "amos", "miheia", "ioil", "avdie", "iona", "naum", "avacum", "sofonie", "agheu", "zaharia", "maleahi"] # ar mai fi de completat
 
@@ -217,25 +217,31 @@ def split_in_paragraphs(text):
     return paragraphs
 
 
-def text_to_pdf(text, output_file):
+def text_to_pdf(text, output_file, content_mode="html", split_mode="advanced"):
     doc = SimpleDocTemplate(output_file, pagesize=letter)
     styles = getSampleStyleSheet()
     
     # Divizăm textul în paragrafe
-    paragraphs = split_in_paragraphs(text)
+    paragraphs = split_in_paragraphs(text) if split_mode.lower() == "advanced" else text.split("\n")
     
     # Adăugăm fiecare paragraf în document
     flowables = []
     for paragraph in paragraphs:
-        soup = BeautifulSoup(paragraph, "html.parser")
-        cleaned_text = soup.get_text()
-        cleaned_text = cleaned_text.replace('<', ' ').replace('>', ' ')
-        
-        p = Paragraph(cleaned_text, styles["Normal"])
-        flowables.append(p)
+        if content_mode.lower() == "html":
+            soup = BeautifulSoup(paragraph, "html.parser")
+            cleaned_text = soup.get_text()
+            cleaned_text = cleaned_text.replace('<', ' ').replace('>', ' ')
+            p = Paragraph(cleaned_text, styles["Normal"])
+            flowables.append(p)
+        else:
+            cleaned_text = paragraph.replace('<', ' ').replace('>', ' ')
+            if len(cleaned_text.strip()) > 0:
+                flowables.append(Paragraph(cleaned_text, styles["Normal"]))
+            else: 
+                flowables.append(Spacer(1, 10))
     
     doc.build(flowables)
-    print("Fișierul PDF a fost creat cu succes!")
+    #print(f"Fisierul PDF {output_file} a fost creat cu succes!")
     
 
 def text_to_docx(text, output_file):
@@ -262,6 +268,26 @@ def replace_special_characters(text):
     normalized_text = unicodedata.normalize('NFKD', text)
     replaced_text = normalized_text.encode('ASCII', 'ignore').decode('ASCII')
     return replaced_text
+    
+def normalize_romanian(text):
+    # Conversia la lowercase
+    text = text.lower()
+
+    # Înlocuirea diacriticelor
+    replacements = {
+        '\u0103': 'a', '\u0102': 'a',  # ă
+        '\u00E2': 'a', '\u00C2': 'a',  # â
+        '\u00EE': 'i', '\u00CE': 'i',  # î
+        '\u0219': 's', '\u0218': 's',  # ș
+        '\u021B': 't', '\u021A': 't',  # ț
+        '\u015F': 's', '\u015E': 's',  # ș cu cedilla
+        '\u0163': 't', '\u0162': 't'   # ț cu cedilla
+    }
+
+    for diacritic, replacement in replacements.items():
+        text = text.replace(diacritic, replacement)
+
+    return text
 
 import PyPDF2
 from docx import Document

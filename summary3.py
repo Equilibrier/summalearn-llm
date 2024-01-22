@@ -25,7 +25,7 @@ def segment_text_by_sentence(text, max_length):
 
     return segments
 
-openai.api_key = "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"
+openai.api_key = "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" # summalearn-llm pe https://platform.openai.com/api-keys
 
 
 def summarize_text_segment(segment):
@@ -47,7 +47,8 @@ def summarize_text_segment(segment):
             output = response["choices"][0]["message"]["content"]
             error = False
             break
-        except:
+        except Exception as e:
+            print(f"Exception: {str(e)}")
             trials += 1
             sleep(11)
     if error:
@@ -89,12 +90,13 @@ def summarize_one_file(in_file, out_file_txt):
     steps = 0
     print(f"Iteratie curenta: {token_count} tokeni")
     
+    _marja_similaritate = 5
     while token_count > target_length or processed_at_least_once is False:  # Check the token count
         previous_summary = summary
         previous_token_count = token_count
         summary = summarize_iteratively(summary, max_length)
         token_count = len(tokenizer.encode(summary))
-        if token_count == previous_token_count:
+        if abs(token_count - previous_token_count) <= _marja_similaritate:
             print(f"ChatGPT nu mai rezuma mai mult, lasam lucrurile la valoarea de {token_count} tokeni")
             break
         print(f"Iteratie curenta: {token_count} tokeni")
